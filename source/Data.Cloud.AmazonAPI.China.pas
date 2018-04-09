@@ -42,7 +42,7 @@ const
   CLASS_REDUCED_REDUNDANCY = 'REDUCED_REDUNDANCY';
 
 type
-  TAmazonChinaServiceType = (csS3, csSQS, csSNS);
+  TAmazonChinaServiceType = (csS3, csSQS, csSNS, csGateWay);
 
   TAmazonChinaRegion =(amzrNotSpecified, amzrBeijing, amzrNingxia);
 
@@ -75,17 +75,22 @@ type
   TAmazonChinaConnectionInfo = class(TAmazonConnectionInfo)
   private
     FSNSEndpoint: string;
+    FGateWayEndPoint:string;
     function GetSNSEndpoint: string;
     function GetSNSURL: string;
+    function GetGateWayEndpoint:String;
+    function GetGateWayURL:string;
   public
     /// <summary>Creates a new instance of this connection info class</summary>
     /// <param name="AOwner">The component owner.</param>
     constructor Create(AOwner: TComponent); override;
     /// <summary>The sample notify service URL for issuing requests.</summary>
     property SNSURL: string read GetSNSURL;
+    property GateWayURL:string read GetGateWayURL;
   published
     /// <summary>The host/endpoint to use when connecting with the SNS  service.</summary>
     property SNSEndpoint: string read GetSNSEndpoint write FSNSEndpoint;
+    property GateWayEndPoint:string read GetGateWayEndpoint write FGateWayEndPoint;
   end;
 
  /// <summary>Implementation of TAmazonService for managing an Amazon Simple Storage Service (S3) account.</summary>
@@ -108,8 +113,6 @@ type
       var URL: string; Request: TCloudHTTP; var Content: TStream);
     function GetConnectionInfo:TAmazonChinaConnectionInfo;
   protected
-    /// <summary>The lazy-loaded list of required header names.</summary>
-    FRequiredHeaderNames: TStrings;
     /// <summary>Returns the list of required header names</summary>
     /// <remarks>Implementation of abstract declaration in parent class.
     ///    Lazy-loads and returns FRequiredHeaderNames. Sets InstanceOwner to false,
@@ -208,7 +211,7 @@ type
   end;
 
 const
-  TAmazonChinaServiceTypes:array[TAmazonChinaServiceType] of string = ('s3','sqs', 'sns');
+  TAmazonChinaServiceTypes:array[TAmazonChinaServiceType] of string = ('s3','sqs', 'sns', 'execute-api');
   TAmazonChinaRegions:array[TAmazonChinaRegion] of string = ('cn-north-1', 'cn-north-1', 'cn-northwest-1');
 
 
@@ -466,12 +469,18 @@ end;
 
 constructor TAmazonChinaBaseService.Create(
   const ConnectionInfo: TAmazonChinaConnectionInfo);
+var
+  InstanceOwner:Boolean;
+  RequiredHeaderNames:TStrings;
 begin
   inherited Create(ConnectionInfo);
 
   FUseCanonicalizedHeaders := True;
   FUseResourcePath := True;
 
+  RequiredHeaderNames:=GetRequiredHeaderNames(InstanceOwner);
+  if InstanceOwner then
+    FreeAndNil(RequiredHeaderNames);
 end;
 
 function TAmazonChinaBaseService.CreateAuthInstance(
@@ -489,7 +498,6 @@ end;
 
 destructor TAmazonChinaBaseService.Destroy;
 begin
-  FreeAndNil(FRequiredHeaderNames);
   inherited;
 end;
 
@@ -787,6 +795,20 @@ constructor TAmazonChinaConnectionInfo.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FSNSEndpoint := 'sns.amazonaws.com';
+  FGateWayEndPoint := 'execute-api.amazonaws.com';
+end;
+
+function TAmazonChinaConnectionInfo.GetGateWayEndpoint: String;
+begin
+  if UseDefaultEndpoints then
+    Exit('execute-api.amazonaws.com');
+
+  Exit(FGateWayEndpoint);
+end;
+
+function TAmazonChinaConnectionInfo.GetGateWayURL: string;
+begin
+  Result := Format('%s://%s', [Protocol, FGateWayEndpoint]);
 end;
 
 function TAmazonChinaConnectionInfo.GetSNSEndpoint: string;

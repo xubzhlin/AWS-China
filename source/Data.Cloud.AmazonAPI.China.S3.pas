@@ -1003,10 +1003,10 @@ end;
 function TAmazonChinaStorageService.GetRequiredHeaderNames(out InstanceOwner: Boolean): TStrings;
 begin
   InstanceOwner := False;
-  if (FRequiredHeaderNames = nil) or (FRequiredHeaderNames.Count = 0) then
-  begin
-    FRequiredHeaderNames.Free;
+  if (FRequiredHeaderNames = nil)  then
     FRequiredHeaderNames := TStringList.Create;
+  if FRequiredHeaderNames.Count = 0 then
+  begin
     FRequiredHeaderNames.Add('host');
     FRequiredHeaderNames.Add('x-amz-content-sha256');
     FRequiredHeaderNames.Add('x-amz-date');
